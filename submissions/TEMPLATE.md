@@ -1,7 +1,8 @@
 # Add-on submission
 
-Copy this file to a uniquely named Markdown file in `submissions/`.
-This is a review request, not a machine-readable catalog record or approval.
+Use [TEMPLATE.submission](TEMPLATE.submission) for the required machine-readable
+file at `submissions/<id>/<version>.submission`. The checklist below may be used
+in your PR description; a Markdown checklist alone is not a validated submission.
 
 - Claimed add-on id:
 - Creator repository (`owner/repository`):
