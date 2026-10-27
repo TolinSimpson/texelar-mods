@@ -1,0 +1,13 @@
+# Local credentials and editor/OS artifacts do not belong in public submissions.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Packages stay in creator repositories, not this metadata catalog.
+*.texelar
