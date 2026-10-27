@@ -22,9 +22,10 @@ ATTRIBUTION.md          third-party credits and applicable licenses
 README.md               description, limitations and version changes
 ```
 
-Prepare this directory manually from an accepted workspace export for now; this
-repository does not provide a GitHub-ready export command. Preserve the original
-export bytes. Do not rerun a version-bumping export to verify an existing version.
+Use `python tools/catalog.py export` to prepare a directory from an accepted
+workspace export, or assemble the layout manually. See [tooling](tooling.md).
+The command uses the installed engine's non-mutating source-equivalence checker.
+Preserve the original export bytes. Do not rerun a version-bumping export to verify an existing version.
 Include required attribution and only content you have permission to publish.
 Remove credentials, tokens, private files and unrelated workspace history.
 
@@ -42,8 +43,8 @@ cannot supply the catalog's trusted passing verdict.
 3. Open that commit and copy its full 40-character commit SHA. A version tag can
    help people discover a release, but a branch, tag or abbreviated SHA is not a
    catalog pin. Keep each package at or below 25 MiB.
-4. Fork `TolinSimpson/texelar-mods`. Copy `submissions/TEMPLATE.md` to a uniquely
-   named Markdown file under `submissions/` in your fork. Fill in its exact
+4. Fork `TolinSimpson/texelar-mods`. Copy `submissions/TEMPLATE.submission` to
+   `submissions/<id>/<version>.submission` in your fork. Fill in its exact
    repository, commit and paths, then commit the file.
 5. Use **Contribute > Open pull request** to submit that file to this repository.
    Explain the change and disclose known limitations. Leave the template itself
@@ -67,6 +68,7 @@ second hand-authored manifest in this catalog. Each update needs a new submissio
 and approval. An existing identity/version/hash is immutable; changing package
 bytes requires a new version.
 
-Do not add files under `catalog/` as a creator submission. The native catalog
-schema and trusted publication path are pending. Maintainers cannot mark a
-version approved until its required checks and ownership review are complete.
+Do not add catalog records or executable code to a submission PR. Maintainers
+independently validate the frozen commit, review its ownership and add its native
+version record under `records/<id>/<version>.catalog` through protected review.
+Required checks and per-version approval must complete before publication.

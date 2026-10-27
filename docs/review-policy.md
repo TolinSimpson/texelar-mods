@@ -1,7 +1,8 @@
 # Maintainer review and publication policy
 
-This policy describes the launch requirements. The bootstrap has no validator,
-ownership registry, published catalog or publication automation.
+This policy governs the native validator tooling, ownership records and gated
+publication workflows. Trusted verifier distribution and GitHub protection
+settings must be configured before launch; see [setup](tooling.md).
 
 ## Validate every submitted version
 

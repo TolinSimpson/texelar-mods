@@ -1,0 +1,96 @@
+name: Publish reviewed catalog
+on:
+  workflow_dispatch:
+    inputs:
+      initial_catalog:
+        description: Allow the first publication only when the catalog branch does not exist
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - run: python -m unittest discover -s tests -v
+      - name: Require protected reviewed source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $protected = gh api "repos/$env:GITHUB_REPOSITORY/branches/main" --jq .protected
+          if ($protected -ne 'true') { throw 'Protect main and require version review before publication.' }
+      - name: Acquire maintainer-pinned engine verifier
+        env:
+          VERIFIER_URL: ${{ vars.TRUSTED_VERIFIER_URL }}
+          VERIFIER_SHA256: ${{ vars.TRUSTED_VERIFIER_SHA256 }}
+        run: python tools/bootstrap_verifier.py "$env:VERIFIER_URL" "$env:VERIFIER_SHA256" _verifier
+      - name: Build from reviewed records and previous protected publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALLOW_INITIAL: ${{ inputs.initial_catalog }}
+        run: |
+          New-Item -ItemType Directory -Path output | Out-Null
+          $initial = @()
+          if ($env:ALLOW_INITIAL -eq 'true') { $initial = @('--initial') }
+          python tools/previous.py "$env:GITHUB_REPOSITORY" output/previous.catalog @initial
+          if ($LASTEXITCODE) { throw 'Previous catalog could not be verified.' }
+          $previous = @()
+          if (Test-Path -LiteralPath output/previous.catalog) {
+            $previous = @('--previous', 'output/previous.catalog')
+          }
+          python tools/catalog.py build --engine _verifier/Texelar.exe --base _verifier/base.texelar --work work --output output/library.catalog @previous
+          if ($LASTEXITCODE) { throw 'Catalog verification failed.' }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: checked-catalog
+          path: output/library.catalog
+          if-no-files-found: error
+          retention-days: 14
+  publish:
+    needs: verify
+    environment: catalog-publication
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Require the environment's human review gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $rules = gh api "repos/$env:GITHUB_REPOSITORY/environments/catalog-publication" | ConvertFrom-Json
+          if ($LASTEXITCODE -or -not ($rules.protection_rules | Where-Object type -eq 'required_reviewers')) {
+            throw 'Configure required human reviewers for catalog-publication before publishing.'
+          }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: checked-catalog
+          path: _checked
+      - name: Publish data only
+        run: |
+          $bytes = [IO.File]::ReadAllBytes((Join-Path $PWD '_checked/library.catalog'))
+          if ($bytes.Length -gt 8388608) { throw 'Catalog exceeds its ceiling.' }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch --no-tags origin catalog 2>$null
+          if ($LASTEXITCODE -eq 0) { git switch --force-create catalog origin/catalog }
+          else { git switch --orphan catalog }
+          if ($LASTEXITCODE) { throw 'Cannot select catalog output branch.' }
+          New-Item -ItemType Directory -Path catalog -Force | Out-Null
+          [IO.File]::WriteAllBytes((Join-Path $PWD 'catalog/library.catalog'), $bytes)
+          git add -- catalog/library.catalog
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          git commit -m "Publish reviewed catalog from $env:GITHUB_SHA"
+          if ($LASTEXITCODE) { throw 'Cannot commit catalog output.' }
+          git push origin HEAD:catalog
+          if ($LASTEXITCODE) { throw 'Catalog publication failed; retain the checked artifact.' }

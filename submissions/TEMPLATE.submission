@@ -1,0 +1,15 @@
+texelar-addon-submission 1
+repository REPLACE_OWNER/REPLACE_REPOSITORY
+commit REPLACE_WITH_FULL_40_CHARACTER_COMMIT_SHA
+source assets
+inputs inputs
+manifest manifest/REPLACE_ID.addon
+package dist/REPLACE_ID.texelar
+license LICENSE
+attribution ATTRIBUTION.md
+preview previews/preview.jpg
+evidence evidence
+tags REPLACE_TAGS
+changes REPLACE_VERSION_CHANGES
+report https://github.com/REPLACE_OWNER/REPLACE_REPOSITORY/issues
+profile horde-coop

@@ -1,0 +1,40 @@
+name: Validate version submission
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      # Trusted base revision only. PR trees, workflows and Python are never run.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - run: python -m unittest discover -s tests -v
+      - name: Acquire maintainer-pinned engine verifier
+        env:
+          VERIFIER_URL: ${{ vars.TRUSTED_VERIFIER_URL }}
+          VERIFIER_SHA256: ${{ vars.TRUSTED_VERIFIER_SHA256 }}
+        run: python tools/bootstrap_verifier.py "$env:VERIFIER_URL" "$env:VERIFIER_SHA256" _verifier
+      - name: Fetch submitted documents as bounded data and run independent checks
+        env:
+          CATALOG_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python tools/check_pr.py "$env:CATALOG_REPOSITORY" "$env:PR_NUMBER" --work work --engine _verifier/Texelar.exe --base _verifier/base.texelar
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: independent-version-evidence
+          path: |
+            work/**/*.report
+            work/**/*.catalog
+            work/**/independent-evidence/**
+          if-no-files-found: ignore
+          retention-days: 14

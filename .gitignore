@@ -11,3 +11,9 @@ Thumbs.db
 
 # Packages stay in creator repositories, not this metadata catalog.
 *.texelar
+__pycache__/
+*.pyc
+_verifier/
+_checked/
+work/
+output/
